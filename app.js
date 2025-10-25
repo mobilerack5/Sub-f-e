@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Űrlap elküldésének kezelése
     form.addEventListener("submit", async (e) => {
-        e.preventDefault(); // Alapértelmezett küldés megállítása
+        e.preventDefault(); 
 
         const ltUrl = localtunnelUrlInput.value.trim();
         if (!ltUrl) {
@@ -37,19 +37,21 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Gomb letiltása és státusz frissítése
+        if (!ltUrl.startsWith("https://") || !ltUrl.endsWith(".loca.lt")) {
+             updateStatus("Hiba: Érvénytelen Localtunnel URL formátum. (pl: httpss://...loca.lt)", "error");
+            return;
+        }
+
         processButton.disabled = true;
         updateStatus("Feldolgozás indítása... A backend válaszára várva. Ez percekig is tarthat!", "loading");
 
         try {
-            // FormData objektum létrehozása
             const formData = new FormData();
             
             const sourceType = document.querySelector('input[name="source_type"]:checked').value;
             formData.append("source_type", sourceType);
             formData.append("kimeneti_formatum", formatumSelect.value);
 
-            // Adatok hozzáadása a forrás típusa alapján
             if (sourceType === "url") {
                 const videoUrl = videoUrlInput.value.trim();
                 if (!videoUrl) {
@@ -64,14 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 formData.append("video_file", videoFile);
 
-                // Opcionális feliratfájl
                 const subtitleFile = subtitleFileInput.files[0];
                 if (subtitleFile) {
                     formData.append("subtitle_file", subtitleFile);
                 }
             }
 
-            // Fetch kérés küldése a Colab backendnek
             const response = await fetch(`${ltUrl}/process`, {
                 method: "POST",
                 body: formData,
@@ -79,20 +79,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = await response.json();
 
-            if (data.success) {
+            if (response.ok && data.success) {
                 updateStatus(`<strong>Siker!</strong> A feldolgozás befejeződött.<br>
                              A kimeneti fájl a Google Drive-odon található:<br>
                              <code>${data.output_path}</code>`, "success");
             } else {
-                throw new Error(data.error || "Ismeretlen hiba történt a backend oldalon.");
+                throw new Error(data.error || `A szerver ${response.status} hibával tért vissza.`);
             }
 
         } catch (error) {
             console.error("Hiba:", error);
-            updateStatus(`<strong>Hiba történt:</strong> ${error.message}<br>
-                         Ellenőrizd a Localtunnel URL-t és a Colab cella futását!`, "error");
+            if (error.message.includes("Failed to fetch")) {
+                 updateStatus(`<strong>Hálózati hiba:</strong> Nem sikerült elérni a backendet.<br>
+                         Ellenőrizd a Localtunnel URL-t és hogy a Colab cella még fut-e!`, "error");
+            } else {
+                updateStatus(`<strong>Hiba történt:</strong> ${error.message}`, "error");
+            }
         } finally {
-            // Gomb visszakapcsolása
             processButton.disabled = false;
         }
     });
@@ -100,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Státusz frissítő segédfüggvény
     function updateStatus(message, type) {
         statusArea.innerHTML = `<p>${message}</p>`;
-        statusArea.className = ""; // Osztályok törlése
+        statusArea.className = "";
         if (type === "loading") {
             statusArea.classList.add("status-loading");
         } else if (type === "success") {
@@ -109,4 +112,23 @@ document.addEventListener("DOMContentLoaded", () => {
             statusArea.classList.add("status-error");
         }
     }
+
+    // --- ÚJ BLOKK KEZDETE ---
+    // Figyeli a Colab-tól (szülő ablaktól) érkező üzeneteket
+    window.addEventListener("message", (event) => {
+        // Biztonsági ellenőrzés (csak Colab-tól fogadunk el)
+        if (event.origin !== "https://colab.research.google.com") {
+            console.warn("Üzenet elutasítva, az eredet nem megfelelő:", event.origin);
+            return;
+        }
+
+        const ltUrl = event.data;
+
+        // Ellenőrizzük, hogy az adat egy valós Localtunnel URL-nek tűnik-e
+        if (typeof ltUrl === 'string' && ltUrl.startsWith("https://") && ltUrl.endsWith(".loca.lt")) {
+            localtunnelUrlInput.value = ltUrl;
+            updateStatus("✅ Localtunnel URL automatikusan beillesztve!", "success");
+        }
+    }, false);
+    // --- ÚJ BLOKK VÉGE ---
 });
