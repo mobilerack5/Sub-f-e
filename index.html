@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colab Feldolgozó Kliens</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main>
+        <h1>Hibrid Alkalmazás (Colab Backend)</h1>
+        <p>Ez a felület a Google Colab-ban futó Python szkriptet vezérli.</p>
+
+        <section class="config-section">
+            <h2>1. Backend Kapcsolat</h2>
+            <label for="localtunnel_url">Localtunnel URL:</label>
+            <input type="text" id="localtunnel_url" placeholder="https://valami-url.loca.lt" required>
+            <small>Ezt az URL-t a Colab 2. cellájának kimenetéből másold be.</small>
+        </section>
+
+        <form id="process-form">
+            <h2>2. Feldolgozás Indítása</h2>
+
+            <fieldset>
+                <legend>Forrás Típusa</legend>
+                <label>
+                    <input type="radio" name="source_type" value="url" checked> Letöltés URL-ből
+                </label>
+                <label>
+                    <input type="radio" name="source_type" value="upload"> Fájl Feltöltése
+                </label>
+            </fieldset>
+
+            <div id="url-section">
+                <label for="video_url">Videó URL:</label>
+                <input type="text" id="video_url" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+
+            <div id="upload-section" style="display: none;">
+                <label for="video_file">Videó fájl:</label>
+                <input type="file" id="video_file" accept="video/*">
+                
+                <label for="subtitle_file">Saját feliratfájl (opcionális):</label>
+                <input type="file" id="subtitle_file" accept=".srt,.vtt">
+                <small>Ha ezt megadod, a szkript nem fordít, csak beágyazza ezt a fájlt.</small>
+            </div>
+
+            <label for="kimeneti_formatum">Generált felirat formátuma (ha nincs saját fájl):</label>
+            <select id="kimeneti_formatum">
+                <option value="srt">.srt</option>
+                <option value="vtt">.vtt</option>
+            </select>
+
+            <button type="submit" id="process-button">Feldolgozás Indítása</button>
+        </form>
+
+        <section class="status-section">
+            <h2>3. Állapot és Eredmény</h2>
+            <div id="status-area">
+                <p>Várakozás a feladatra...</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
